@@ -12,14 +12,15 @@ dbConnect();
 
 app.use(express.json());
 
-// app.use('/', (req, res) => {
-//     res.send('Hello server')
-// })
 
 app.use('/api/user', authRouter)
 
 app.use(notFound);
 app.use(errorHandler);
+
+// app.use('/', (req, res) => {
+//     res.send('Hello server')
+// })
 
 app.listen(PORT, () => {
     console.log(`server is running ${PORT}`);
