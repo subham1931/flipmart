@@ -1,4 +1,4 @@
-const mongoose = require("mongoose"); 
+const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 // const crypto = require("crypto");
 
@@ -56,9 +56,9 @@ var userSchema = new mongoose.Schema(
 
 //for hasing password
 userSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) {
-//     next();
-//   }
+  //   if (!this.isModified("password")) {
+  //     next();
+  //   }
   const salt = await bcrypt.genSaltSync(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
