@@ -6,23 +6,23 @@ const dotenv = require('dotenv').config();
 const PORT = process.env.PORT || 4000;
 
 const authRouter = require('./routes/authRoutes');
+const productRouter = require('./routes/productRoutes')
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 const cookieParser = require('cookie-parser')
+const morgan = require('morgan')
 
 dbConnect();
 
 app.use(express.json());
 app.use(cookieParser())
+app.use(morgan('dev'))
 
 
 app.use('/api/user', authRouter)
+app.use('/api/product', productRouter)
 
 app.use(notFound);
 app.use(errorHandler);
-
-// app.use('/', (req, res) => {
-//     res.send('Hello server')
-// })
 
 app.listen(PORT, () => {
     console.log(`server is running ${PORT}`);
