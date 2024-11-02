@@ -3,6 +3,7 @@ const Product = require('../models/productModel')
 const asyncHandler = require('express-async-handler')
 const slugify = require('slugify')
 const User = require('../models/userModel')
+const { getAllBlogs } = require('./blogCtrl')
 
 const createProduct = asyncHandler(async (req, res) => {
     try {
@@ -127,4 +128,103 @@ const addToWishlist = asyncHandler(async (req, res) => {
         throw new Error(error)
     }
 })
-module.exports = { createProduct, getProduct, getAllProduct, updateProduct, deleteProduct ,addToWishlist}
+
+// const rating = asyncHandler(async (req, res) => {
+//     const { _id } = req.user;
+//     const { star, prodId } = req.body;
+//     try {
+//         const product = await Product.findById(prodId);
+//         let alreadyRated = product.ratings.find((userId) => userId.postedby.toString() === _id.toString());
+
+//         if (alreadyRated) {
+//             const updateRating = await Product.updateOne({
+//                 ratings: { $elemMatch: alreadyRated },
+//             }, {
+//                 $set: { "rating.$.star": star },
+//             }, {
+//                 new: true,
+//             })
+//             // res.json(updateRating);
+//         } else {
+//             const rateProduct = await Product.findByIdAndUpdate(prodId, {
+//                 $push: {
+//                     ratings: {
+//                         star: star,
+//                         postedby: _id
+//                     },
+//                 },
+//             }, {
+//                 new: true
+//             })
+//             // res.json(rateProduct);
+//         }
+
+//         const getallratings = await Product.findById(prodId);
+//         let totalRating = getallratings.ratings.length;
+//         let ratingsum = getallratings.ratings.map((item) => item.star).reduce((prev, curr) => prev + curr, 0);
+//         let actualRating = Math.round(ratingsum / totalRating);
+//         let finalProduct = await Product.findByIdAndUpdate(prodId, {
+//             totalrating: actualRating,
+//         }, { new: true });
+//         res.json(finalProduct);
+//     } catch (error) {
+//         throw new Error(error)
+//     }
+// })
+
+const rating = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    const { star, prodId } = req.body;
+
+    try {
+        const product = await Product.findById(prodId);
+        
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Check if the user has already rated the product
+        let alreadyRated = product.ratings.find(
+            (rating) => rating?.postedby?.toString() === _id.toString()
+        );
+
+        if (alreadyRated) {
+            // Update the existing rating
+            await Product.updateOne(
+                { _id: prodId, "ratings.postedby": _id },
+                { $set: { "ratings.$.star": star } },
+                { new: true }
+            );
+        } else {
+            // Add a new rating
+            await Product.findByIdAndUpdate(
+                prodId,
+                {
+                    $push: {
+                        ratings: { star, postedby: _id },
+                    },
+                },
+                { new: true }
+            );
+        }
+
+        // Recalculate the average rating
+        const updatedProduct = await Product.findById(prodId);
+        const totalRating = updatedProduct.ratings.length;
+        const ratingsSum = updatedProduct.ratings.reduce((sum, rating) => sum + (rating.star || 0), 0);
+        const actualRating = Math.round(ratingsSum / totalRating);
+
+        // Update the product's average rating
+        const finalProduct = await Product.findByIdAndUpdate(
+            prodId,
+            { totalrating: actualRating },
+            { new: true }
+        );
+
+        res.json(finalProduct);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = { createProduct, getProduct, getAllProduct, updateProduct, deleteProduct, addToWishlist, rating }
