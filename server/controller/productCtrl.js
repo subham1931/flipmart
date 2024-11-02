@@ -2,6 +2,7 @@ const { json } = require('body-parser')
 const Product = require('../models/productModel')
 const asyncHandler = require('express-async-handler')
 const slugify = require('slugify')
+const User = require('../models/userModel')
 
 const createProduct = asyncHandler(async (req, res) => {
     try {
@@ -70,10 +71,10 @@ const getAllProduct = asyncHandler(async (req, res) => {
         let query = Product.find(JSON.parse(queryStr));
 
         //sorting
-        if(req.query.sort){
+        if (req.query.sort) {
             const sortBy = req.query.sort.split(",").join(' ');
             query = query.sort(sortBy)
-        }else{
+        } else {
             query = query.sort('-createdAt')
         }
 
@@ -81,19 +82,19 @@ const getAllProduct = asyncHandler(async (req, res) => {
         if (req.query.fields) {
             const fields = req.query.fields.split(",").join(" ");
             query = query.select(fields);
-          } else {
+        } else {
             query = query.select("-__v");
-          }
+        }
 
-          //pagination
-          const page = req.query.page;
-          const limit = req.query.limit;
-          const skip = (page - 1) * limit;
-          query = query.skip(skip).limit(limit);
-          if (req.query.page) {
+        //pagination
+        const page = req.query.page;
+        const limit = req.query.limit;
+        const skip = (page - 1) * limit;
+        query = query.skip(skip).limit(limit);
+        if (req.query.page) {
             const productCount = await Product.countDocuments();
             if (skip >= productCount) throw new Error("This Page does not exists");
-          }
+        }
 
         const product = await query;
         res.json(product);
@@ -102,4 +103,28 @@ const getAllProduct = asyncHandler(async (req, res) => {
     }
 })
 
-module.exports = { createProduct, getProduct, getAllProduct, updateProduct, deleteProduct }
+const addToWishlist = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    const { prodId } = req.body;
+    try {
+        const user = await User.findById(_id);
+        const alreadyAdded = user.wishlist.find((id) =>
+            id.toString() === prodId
+        );
+
+        if (alreadyAdded) {
+            let user = await User.findByIdAndUpdate(_id, {
+                $pull: { wishlist: prodId }
+            }, { new: true })
+            res.json(user)
+        } else {
+            let user = await User.findByIdAndUpdate(_id, {
+                $push: { wishlist: prodId }
+            }, { new: true })
+            res.json(user)
+        }
+    } catch (error) {
+        throw new Error(error)
+    }
+})
+module.exports = { createProduct, getProduct, getAllProduct, updateProduct, deleteProduct ,addToWishlist}
